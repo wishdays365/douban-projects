@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电影检索 | 豆瓣Top250</title>
+    <style>
+        /* 全局样式（与其他页面统一） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(135deg, #4472C4, #2F5597);
+            color: #fff;
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        /* 导航样式 */
+        .nav {
+            max-width: 1000px;
+            margin: 0 auto 30px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            padding: 10px 0;
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        .nav li {
+            display: inline-block;
+            margin: 0 10px;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #333;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        .nav a:hover {
+            color: #4472C4;
+            font-weight: bold;
+        }
+        /* 检索表单样式 */
+        .search-form {
+            max-width: 1000px;
+            margin: 0 auto 30px;
+            padding: 25px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #4472C4;
+            font-size: 14px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #4472C4;
+            outline: none;
+        }
+        .search-btn {
+            padding: 12px 30px;
+            background: #4472C4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: background 0.3s;
+        }
+        .search-btn:hover {
+            background: #2F5597;
+        }
+        .search-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        /* 加载状态样式 */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+            font-size: 18px;
+            display: none;
+        }
+        /* 结果列表样式 */
+        .results-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .total-count {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #666;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .total-count strong {
+            color: #E74C3C;
+            font-size: 18px;
+        }
+        .result-item {
+            background: #fff;
+            padding: 25px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s;
+        }
+        .result-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .result-item h3 {
+            color: #4472C4;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .result-item h3 span {
+            font-size: 14px;
+            color: #E74C3C;
+            font-weight: normal;
+        }
+        .result-item .meta {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.8;
+            font-size: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 15px;
+        }
+        .result-item .meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .result-item .meta span::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #999;
+        }
+        .result-item .intro {
+            color: #333;
+            line-height: 1.8;
+            font-size: 14px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f4f8;
+        }
+        .result-item .intro a {
+            color: #4472C4;
+            text-decoration: none;
+            margin-left: 8px;
+        }
+        .result-item .intro a:hover {
+            text-decoration: underline;
+        }
+        .no-result {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            font-size: 18px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        /* 页脚样式 */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #e0e6ed;
+            margin-top: 50px;
+        }
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .search-form {
+                padding: 15px;
+                gap: 10px;
+            }
+            .form-group {
+                min-width: 120px;
+            }
+            .result-item {
+                padding: 20px 15px;
+            }
+            .result-item .meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 豆瓣Top250电影 - 多维度检索</h1>
+        <p>支持标题/导演/类型/国家/演员检索，可筛选评分/年份</p>
+    </div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+            <li><a href="/movie-map">国家分布</a></li>
+            <li><a href="/genre-analysis">🎭 类型分析</a></li>
+            <li><a href="/actor-analysis">👥 演员统计</a></li>
+        </ul>
+    </div>
+
+    <!-- 检索表单 -->
+    <form class="search-form" id="searchForm">
+        <div class="form-group">
+            <label>检索关键词</label>
+            <input type="text" name="keyword" value="{{ keyword|default('', true) }}" placeholder="例如：诺兰、科幻、美国、9.0+">
+        </div>
+        <div class="form-group">
+            <label>检索维度</label>
+            <select name="filter_type">
+                <option value="all" {% if filter_type == 'all' or not filter_type %}selected{% endif %}>全维度</option>
+                <option value="title" {% if filter_type == 'title' %}selected{% endif %}>电影标题</option>
+                <option value="director" {% if filter_type == 'director' %}selected{% endif %}>导演</option>
+                <option value="genre" {% if filter_type == 'genre' %}selected{% endif %}>电影类型</option>
+                <option value="country" {% if filter_type == 'country' %}selected{% endif %}>国家/地区</option>
+                <option value="actor" {% if filter_type == 'actor' %}selected{% endif %}>演员</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>最低评分</label>
+            <input type="number" name="min_rating" value="{{ min_rating|default(0, true) }}" min="0" max="10" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>最高评分</label>
+            <input type="number" name="max_rating" value="{{ max_rating|default(10, true) }}" min="0" max="10" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>最早年份</label>
+            <input type="number" name="min_year" value="{{ min_year|default(1900, true) }}" min="1900" max="2025">
+        </div>
+        <div class="form-group">
+            <label>最晚年份</label>
+            <input type="number" name="max_year" value="{{ max_year|default(2025, true) }}" min="1900" max="2025">
+        </div>
+        <button type="submit" class="search-btn" id="searchBtn">执行检索</button>
+    </form>
+
+    <!-- 检索结果 -->
+    <div class="results-container">
+        <!-- 加载状态 -->
+        <div class="loading" id="loading">正在检索，请稍候...</div>
+        
+        <!-- 结果统计 -->
+        <div class="total-count" id="totalCount" {% if total is not defined or total == 0 %}style="display: none;"{% endif %}>
+            共检索到 <strong>{{ total|default(0) }}</strong> 条匹配结果
+        </div>
+
+        <!-- 结果列表 -->
+        <div id="resultList">
+            {% if total and total > 0 %}
+                {% for movie in results %}
+                    <div class="result-item">
+                        <h3>
+                            {{ movie.title }} 
+                            <span>★ {{ movie.rating|default('暂无') }}</span>
+                        </h3>
+                        <div class="meta">
+                            <span>导演：{{ movie.director|join('/') if movie.director else '未知' }}</span>
+                            <span>国家：{{ movie.country|join('/') if movie.country else '未知' }}</span>
+                            <span>类型：{{ movie.genre|join('/') if movie.genre else '未知' }}</span>
+                            <span>年份：{{ movie.year|default('未知') }}</span>
+                            <span>时长：{{ movie.duration|default('未知') }}分钟</span>
+                            <span>评价数：{{ movie.votes|default('未知') }}</span>
+                        </div>
+                        <div class="intro">
+                            {{ movie.intro|default('暂无简介') }}
+                            {% if movie.detail_url %}
+                                <br><a href="{{ movie.detail_url }}" target="_blank">🔗 查看豆瓣详情</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% elif total is defined and total == 0 %}
+                <div class="no-result">
+                    🚫 未找到匹配的电影，请调整检索条件后重试
+                </div>
+            {% else %}
+                <div class="no-result">
+                    请输入检索条件并点击「执行检索」按钮
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>豆瓣Top250电影数据分析系统 © 2025 | 检索功能支持模糊匹配</p>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const loading = document.getElementById('loading');
+        const totalCount = document.getElementById('totalCount');
+        const resultList = document.getElementById('resultList');
+
+        // 表单提交处理（异步提交，禁用缓存）
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // 阻止默认表单提交
+            
+            // 收集表单数据
+            const formData = new FormData(searchForm);
+            const params = new URLSearchParams(formData);
+            
+            // 显示加载状态，禁用按钮
+            loading.style.display = 'block';
+            searchBtn.disabled = true;
+            totalCount.style.display = 'none';
+            resultList.innerHTML = '';
+
+            try {
+                // 异步请求检索接口（核心：禁用缓存，确保最新数据）
+                const response = await fetch(`/api/search?${params}`, {
+                    method: 'GET',
+                    cache: 'no-cache' // 关键：禁用浏览器缓存
+                });
+
+                if (!response.ok) throw new Error(`检索请求失败 [${response.status}]`);
+                const data = await response.json();
+
+                // 隐藏加载状态，启用按钮
+                loading.style.display = 'none';
+                searchBtn.disabled = false;
+
+                // 更新结果统计
+                totalCount.innerHTML = `共检索到 <strong>${data.total}</strong> 条匹配结果`;
+                totalCount.style.display = 'block';
+
+                // 渲染检索结果
+                if (data.total > 0) {
+                    resultList.innerHTML = data.results.map(movie => `
+                        <div class="result-item">
+                            <h3>
+                                ${movie.title || '未知标题'} 
+                                <span>★ ${movie.rating || '暂无'}</span>
+                            </h3>
+                            <div class="meta">
+                                <span>导演：${movie.director?.join('/') || '未知'}</span>
+                                <span>国家：${movie.country?.join('/') || '未知'}</span>
+                                <span>类型：${movie.genre?.join('/') || '未知'}</span>
+                                <span>年份：${movie.year || '未知'}</span>
+                                <span>时长：${movie.duration || '未知'}分钟</span>
+                                <span>评价数：${movie.votes || '未知'}</span>
+                            </div>
+                            <div class="intro">
+                                ${movie.intro || '暂无简介'}
+                                ${movie.detail_url ? `<br><a href="${movie.detail_url}" target="_blank">🔗 查看豆瓣详情</a>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultList.innerHTML = `
+                        <div class="no-result">
+                            🚫 未找到匹配的电影，请调整检索条件后重试
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                // 错误处理
+                loading.style.display = 'none';
+                searchBtn.disabled = false;
+                totalCount.style.display = 'none';
+                resultList.innerHTML = `
+                    <div class="no-result" style="color: #e74c3c;">
+                        检索失败：${err.message}<br>请检查网络或重试
+                    </div>
+                `;
+                console.error('检索失败：', err);
+            }
+        });
+
+        // 初始化：如果已有后端传参（首次加载），确保统计显示
+        {% if total is defined %}
+            totalCount.style.display = 'block';
+        {% endif %}
+    </script>
+</body>
+</html>

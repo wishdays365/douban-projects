@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>电影国家分布 | 豆瓣Top250</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- 加载ECharts核心库 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <style>
+        #movieMap {
+            width: 100%;
+            height: 700px;
+            min-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background: #f5f5f5;
+            margin-bottom: 20px;
+        }
+        .nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        .nav li {
+            display: inline-block;
+            margin: 0 10px;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #4472C4;
+            font-size: 16px;
+        }
+        .nav a:hover {
+            color: #E74C3C;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>豆瓣Top250电影 - 国家/地区分布</h1>
+        <p>颜色越深=电影数量越多 | 鼠标悬浮查看详情</p>
+    </div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+        </ul>
+    </div>
+
+    <div class="chart-container">
+        <div id="movieMap"></div>
+    </div>
+
+    <script>
+        // 1. 初始化ECharts实例
+        const myChart = echarts.init(document.getElementById('movieMap'));
+
+        // 2. 定义国家名称映射（修复：匹配ECharts官方world.json标准名称）
+        const COUNTRY_MAP = {
+            "美国": "United States",          // 核心修复：从"United States of America"改为"United States"
+            "英国": "United Kingdom",
+            "加拿大": "Canada",
+            "中国大陆": "China",
+            "中国香港": "China",
+            "中国台湾": "China",
+            "日本": "Japan",
+            "韩国": "South Korea",           // 新增：韩国标准名称（原Korea可能不匹配）
+            "法国": "France",
+            "德国": "Germany",
+            "意大利": "Italy",
+            "印度": "India",
+            "俄罗斯": "Russian Federation",
+            "澳大利亚": "Australia",
+            "瑞士": "Switzerland",           // 新增：瑞士标准名称
+            "西班牙": "Spain",
+            "巴西": "Brazil"
+        };
+
+        // 3. 先加载官方世界地图JSON数据，再注册地图
+        fetch('https://cdn.jsdelivr.net/npm/echarts/map/json/world.json')
+            .then(res => res.json())
+            .then(worldMapData => {
+                // 注册世界地图
+                echarts.registerMap('world', worldMapData);
+
+                // 4. 加载自己的国家数据（从/api/country-data）
+                return fetch('/api/country-data');
+            })
+            .then(res => res.json())
+            .then(ourCountryData => {
+                // 5. 转换数据格式（适配地图，新增未匹配日志）
+                const chartData = ourCountryData.map(item => {
+                    const mapName = COUNTRY_MAP[item.cn_name] || item.cn_name;
+                    // 新增：打印未匹配的国家，方便排查
+                    if (!COUNTRY_MAP[item.cn_name]) {
+                        console.warn(`未匹配的国家：${item.cn_name}，请补充到COUNTRY_MAP`);
+                    }
+                    return {
+                        name: mapName,
+                        value: item.count || 0,
+                        cn_name: item.cn_name
+                    };
+                });
+
+                // 6. 配置地图选项
+                const option = {
+                    title: {
+                        text: '豆瓣Top250电影国家/地区分布',
+                        left: 'center',
+                        textStyle: { fontSize: 18 }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: params => `
+                            <div style="padding: 8px;">
+                                <strong>${params.data.cn_name || params.name}</strong>
+                                <p>电影数量：${params.value} 部</p>
+                            </div>
+                        `
+                    },
+                    visualMap: {
+                        min: 0,
+                        max: Math.max(...chartData.map(item => item.value), 10),
+                        left: 'left',
+                        top: 'bottom',
+                        text: ['多', '少'],
+                        calculable: true,
+                        inRange: {
+                            color: ['#e0f7fa', '#006064']
+                        }
+                    },
+                    series: [{
+                        name: '电影数量',
+                        type: 'map',
+                        map: 'world', // 对应注册的地图名称
+                        roam: true,
+                        zoom: 1.2,
+                        center: [0, 20],
+                        label: { show: true, fontSize: 10 },
+                        emphasis: {
+                            label: { color: '#fff' },
+                            itemStyle: { areaColor: '#e53935' }
+                        },
+                        data: chartData
+                    }]
+                };
+
+                // 7. 渲染地图
+                myChart.setOption(option);
+                window.addEventListener('resize', () => myChart.resize());
+            })
+            .catch(err => {
+                console.error("地图加载失败：", err);
+                alert(`地图加载失败：${err.message}`);
+            });
+    </script>
+</body>
+</html>

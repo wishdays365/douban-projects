@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# 数据文件（太大不传）
+*.csv
+*.json
+data_expiry.json
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+Thumbs.db
+desktop.ini
+.DS_Store

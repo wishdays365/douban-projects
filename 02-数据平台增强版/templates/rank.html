@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电影排行 | 豆瓣Top250</title>
+    <style>
+        /* 全局样式重置与统一 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 0 10px; /* 全局留白，适配小屏 */
+        }
+        /* 头部样式 - 与系统风格统一 */
+        .header {
+            background: linear-gradient(135deg, #4472C4, #2F5597);
+            color: #fff;
+            text-align: center;
+            padding: 30px 20px;
+            margin: 20px auto 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1200px;
+        }
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        /* 导航栏样式 - 选中态+hover效果 */
+        .nav {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            padding: 15px 20px;
+        }
+        .nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .nav li {
+            margin: 5px 8px;
+        }
+        .nav a {
+            display: block;
+            padding: 10px 20px;
+            color: #333;
+            text-decoration: none;
+            font-size: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .nav a:hover, .nav a.active {
+            color: #fff;
+            background-color: #4472C4;
+            font-weight: bold;
+        }
+        /* 筛选表单样式 - 响应式布局 */
+        .filter-form {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-group label {
+            font-weight: bold;
+            color: #4472C4;
+            white-space: nowrap; /* 标签不换行 */
+        }
+        .form-group select, .form-group input {
+            padding: 8px 12px;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 120px;
+            flex: 1; /* 自适应宽度 */
+            max-width: 200px; /* 限制最大宽度 */
+        }
+        .filter-btn {
+            padding: 8px 24px;
+            background: #4472C4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            flex: 1;
+            min-width: 120px;
+        }
+        .filter-btn:hover {
+            background: #2F5597;
+        }
+        /* 排行结果容器 */
+        .rank-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .rank-header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #666;
+            padding: 0 10px;
+        }
+        .rank-header strong {
+            color: #E74C3C;
+        }
+        /* 排行项样式 - 卡片式设计 */
+        .rank-item {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: box-shadow 0.3s;
+        }
+        .rank-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        /* 排行数字样式 - 前3名特殊颜色 */
+        .rank-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4472C4;
+            width: 40px;
+            text-align: center;
+            flex-shrink: 0; /* 防止压缩 */
+        }
+        .rank-number.top3 {
+            color: #E74C3C;
+        }
+        /* 电影信息内容区 */
+        .rank-content {
+            flex: 1;
+        }
+        .rank-content h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .rank-content .highlight {
+            color: #E74C3C;
+            font-weight: bold;
+        }
+        .rank-content .meta {
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        /* 无数据/加载状态 */
+        .no-result, .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            font-size: 18px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .no-result {
+            color: #e74c3c;
+        }
+        .loading {
+            color: #4472C4;
+        }
+        /* 响应式适配 - 移动端优化 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .rank-item {
+                padding: 15px;
+                gap: 15px;
+            }
+            .rank-number {
+                font-size: 20px;
+                width: 30px;
+            }
+            .rank-content .meta {
+                gap: 8px;
+                flex-direction: column; /* 移动端纵向排列 */
+            }
+            .filter-form {
+                gap: 15px;
+                padding: 15px;
+            }
+            .form-group {
+                width: 100%; /* 表单组占满宽度 */
+                justify-content: flex-start;
+            }
+            .filter-btn {
+                width: 100%; /* 按钮占满宽度 */
+                padding: 10px 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .nav a {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            .rank-content h3 {
+                font-size: 16px;
+            }
+            .header {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 页面头部 -->
+    <div class="header">
+        <h1>🏆 豆瓣Top250电影 - 多维度排行</h1>
+        <p>支持高分榜/热门榜/最新榜，可自定义展示数量</p>
+    </div>
+
+    <!-- 导航栏（排行页选中态） -->
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+            <li><a href="/crawl">🚀 数据爬取</a></li>
+            <li><a href="/search">🔍 电影检索</a></li>
+            <li><a href="/rank" class="active">🏆 电影排行</a></li>
+            <li><a href="/movie-map">国家分布</a></li>
+            <li><a href="/genre-analysis">🎭 类型分析</a></li>
+            <li><a href="/actor-analysis">👥 演员统计</a></li>
+        </ul>
+    </div>
+
+    <!-- 排行筛选表单 -->
+    <form class="filter-form" id="filterForm">
+        <div class="form-group">
+            <label>排行维度：</label>
+            <select name="dimension" id="dimension">
+                <option value="rating" {% if dimension == 'rating' %}selected{% endif %}>高分榜（评分降序）</option>
+                <option value="votes" {% if dimension == 'votes' %}selected{% endif %}>热门榜（评价数降序）</option>
+                <option value="year" {% if dimension == 'year' %}selected{% endif %}>最新榜（年份降序）</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>展示数量：</label>
+            <input type="number" name="top_n" id="top_n" value="{{ top_n|default(20) }}" min="1" max="50" step="1">
+        </div>
+        <button type="submit" class="filter-btn">更新排行</button>
+    </form>
+
+    <!-- 排行结果展示区 -->
+    <div class="rank-container">
+        <div class="rank-header">
+            当前排行：<strong>
+                {% if dimension == 'rating' %}高分榜{% elif dimension == 'votes' %}热门榜{% elif dimension == 'year' %}最新榜{% else %}高分榜{% endif %}
+            </strong> | 共展示 <strong>{{ total|default(0) }}</strong> 部电影
+        </div>
+
+        <div id="rankList">
+            {% if total and total > 0 %}
+                {# 核心修复：使用Jinja2原生loop变量替代enumerate #}
+                {% for movie in ranking_movies %}
+                    <div class="rank-item">
+                        <!-- loop.index0：从0开始的索引，判断前3名；loop.index：从1开始的排行名次 -->
+                        <div class="rank-number {% if loop.index0 < 3 %}top3{% endif %}">
+                            {{ loop.index }}
+                        </div>
+                        <div class="rank-content">
+                            <h3>
+                                {{ movie.title|default('未知电影') }}
+                                <span class="highlight">
+                                    {% if dimension == 'rating' %}
+                                        ★ {{ movie.rating|default(0.0)|round(1) }}
+                                    {% elif dimension == 'votes' %}
+                                        评价数：{{ movie.votes|default(0) }}
+                                    {% elif dimension == 'year' %}
+                                        上映年份：{{ movie.year|default(0) }}
+                                    {% endif %}
+                                </span>
+                            </h3>
+                            <div class="meta">
+                                <span>导演：{{ movie.director|join('/') if (movie.director and movie.director is iterable) else '未知' }}</span>
+                                <span>类型：{{ movie.genre|join('/') if (movie.genre and movie.genre is iterable) else '未知' }}</span>
+                                <span>国家：{{ movie.country|join('/') if (movie.country and movie.country is iterable) else '未知' }}</span>
+                                {% if dimension != 'rating' %}
+                                    <span>评分：★ {{ movie.rating|default('未知')|round(1) if movie.rating is number else '未知' }}</span>
+                                {% endif %}
+                                {% if dimension != 'votes' %}
+                                    <span>评价数：{{ movie.votes|default('未知') }}</span>
+                                {% endif %}
+                                {% if dimension != 'year' %}
+                                    <span>上映年份：{{ movie.year|default('未知') }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-result">
+                    🚫 暂无排行数据，请先点击「数据爬取」获取豆瓣Top250数据
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 表单提交处理 - 含参数校验和加载状态
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 获取并校验参数
+            const dimension = document.getElementById('dimension').value.trim() || 'rating';
+            let top_n = parseInt(document.getElementById('top_n').value.trim());
+            top_n = isNaN(top_n) ? 20 : Math.max(1, Math.min(50, top_n));
+            
+            // 显示加载提示
+            document.getElementById('rankList').innerHTML = '<div class="loading">🔄 正在加载排行数据...</div>';
+            
+            // 跳转并添加时间戳避免缓存
+            const timestamp = new Date().getTime();
+            window.location.href = `/rank?dimension=${dimension}&top_n=${top_n}&t=${timestamp}`;
+        });
+
+        // 初始化：确保展示数量输入框值合法
+        const topNInput = document.getElementById('top_n');
+        const validateTopN = () => {
+            let value = parseInt(topNInput.value);
+            if (isNaN(value) || value < 1 || value > 50) {
+                topNInput.value = 20;
+            }
+        };
+
+        // 页面加载和输入框变化时校验
+        window.addEventListener('load', validateTopN);
+        topNInput.addEventListener('change', validateTopN);
+        topNInput.addEventListener('blur', validateTopN); // 失去焦点时校验
+    </script>
+</body>
+</html>

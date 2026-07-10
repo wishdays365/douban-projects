@@ -1,0 +1,13 @@
+*.zip
+.DS_Store
+*.xlsx
+*.html
+!templates/*.html
+*.json
+*.csv
+.cache/
+__pycache__/
+*.png
+logs/*.log
+debug_pages
+*.lock

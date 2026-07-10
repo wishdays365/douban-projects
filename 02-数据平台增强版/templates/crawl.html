@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>数据状态 | 豆瓣Top250</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .status-container {
+            max-width: 600px;
+            margin: 0 auto 30px;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .status-fresh {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .status-expired {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+        .status-crawling {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+        }
+        .status-no-data {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .status-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        .refresh-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #4472C4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>豆瓣Top250电影 - 数据状态</h1>
+        <p>系统自动维护数据，3小时保质期，过期将自动重新爬取</p>
+    </div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+            <li><a href="/search">🔍 电影检索</a></li>
+            <li><a href="/movie-map">国家分布</a></li>
+        </ul>
+    </div>
+
+    <!-- 数据状态展示 -->
+    <div class="status-container" id="statusContainer">
+        <div class="status-icon">🔄</div>
+        <h2>正在检查数据状态...</h2>
+    </div>
+
+    <div class="footer">
+        <p>豆瓣Top250电影数据分析系统 © 2025 | 数据自动维护，无需手动操作</p>
+    </div>
+
+    <script>
+        // 更新页面状态的通用函数
+        function renderStatus(data) {
+            const container = document.getElementById('statusContainer');
+            let icon = '';
+            let title = '';
+            let className = '';
+            switch(data.status) {
+                case 'fresh':
+                    icon = '✅';
+                    title = '数据新鲜';
+                    className = 'status-fresh';
+                    break;
+                case 'expired':
+                    icon = '⚠️';
+                    title = '数据已过期';
+                    className = 'status-expired';
+                    break;
+                case 'crawling':
+                    icon = '🔄';
+                    title = '正在爬取数据';
+                    className = 'status-crawling';
+                    break;
+                case 'no_data':
+                    icon = '❌';
+                    title = '暂无数据';
+                    className = 'status-no-data';
+                    break;
+                default:
+                    icon = 'ℹ️';
+                    title = '状态';
+                    className = '';
+            }
+            container.className = `status-container ${className}`;
+            container.innerHTML = `
+                <div class="status-icon">${icon}</div>
+                <h2>${title}</h2>
+                <p>${data.message}</p>
+                ${data.status === 'no_data' ? '<button class="refresh-btn" onclick="window.location.reload()">刷新状态</button>' : ''}
+            `;
+        }
+
+        // 优先使用 EventSource（SSE）进行实时更新，回退到轮询
+        function useSSE() {
+            if (!!window.EventSource) {
+                try {
+                    const es = new EventSource('/api/data-status-stream');
+                    es.onmessage = function(e) {
+                        try {
+                            const payload = JSON.parse(e.data);
+                            renderStatus(payload);
+                        } catch (err) {
+                            console.error('解析 SSE 数据失败', err);
+                        }
+                    };
+                    es.onerror = function() {
+                        // 出错时关闭并回退到轮询
+                        es.close();
+                        startPolling();
+                    };
+                    return true;
+                } catch (e) {
+                    console.warn('无法建立 SSE 连接，回退到轮询');
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        // 轮询回退
+        let pollTimer = null;
+        async function startPolling() {
+            if (pollTimer) return;
+            async function poll() {
+                try {
+                    const resp = await fetch('/api/data-status');
+                    const j = await resp.json();
+                    renderStatus(j.data);
+                } catch (e) {
+                    console.error('轮询获取状态失败', e);
+                }
+            }
+            await poll();
+            pollTimer = setInterval(poll, 30000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!useSSE()) {
+                startPolling();
+            }
+        });
+    </script>
+</body>
+</html>

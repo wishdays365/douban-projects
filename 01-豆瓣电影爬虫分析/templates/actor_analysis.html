@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>演员统计 | 豆瓣Top250</title>
+    <style>
+        /* 全局样式（与首页视觉统一） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #4472C4, #2F5597);
+            color: #fff;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .nav {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .nav a {
+            display: block;
+            padding: 12px 25px;
+            color: #333;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .nav a:hover {
+            color: #4472C4;
+            font-weight: bold;
+        }
+        .chart-container {
+            max-width: 1200px;
+            height: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            padding: 20px;
+            /* 加载状态默认样式 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 1.2rem;
+        }
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .chart-container {
+                height: 400px;
+                padding: 10px;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>👥 豆瓣Top250电影 - 演员出镜统计</h1>
+        <p>统计演员在Top250中出演的电影数量（Top10）</p>
+    </div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+        </ul>
+    </div>
+
+    <div class="chart-container" id="actorChart">正在加载演员统计数据...</div>
+
+    <script>
+        // 初始化ECharts实例
+        let myChart = echarts.init(document.getElementById('actorChart'));
+        
+        // 加载演员数据（核心：禁用缓存 + 完善错误处理）
+        fetch('/api/actor-data', {
+            method: 'GET',
+            cache: 'no-cache' // 禁用浏览器缓存，确保获取最新数据
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(`请求失败 [${res.status}]：${res.statusText}`);
+                return res.json();
+            })
+            .then(data => {
+                // 校验数据有效性
+                if (!data.xAxis || !data.yAxis || data.xAxis.length === 0) {
+                    throw new Error('暂无演员统计数据，请先爬取豆瓣Top250数据');
+                }
+
+                // 配置图表选项
+                const option = {
+                    title: { 
+                        text: '豆瓣Top250电影演员出镜次数Top10', 
+                        left: 'center', 
+                        fontSize: 18,
+                        textStyle: { color: '#333' }
+                    },
+                    tooltip: { 
+                        trigger: 'axis', 
+                        axisPointer: { type: 'shadow' },
+                        formatter: '{b}：{c} 部'
+                    },
+                    grid: { left: '5%', right: '5%', bottom: '10%', containLabel: true },
+                    xAxis: [{ 
+                        type: 'category', 
+                        data: data.xAxis, 
+                        axisLabel: { 
+                            rotate: 45,
+                            fontSize: 12,
+                            interval: 0
+                        } 
+                    }],
+                    yAxis: [{ 
+                        type: 'value', 
+                        name: '出镜次数（部）',
+                        nameTextStyle: { color: '#666' },
+                        min: 0
+                    }],
+                    series: [{
+                        name: '出镜次数',
+                        type: 'bar',
+                        data: data.yAxis,
+                        itemStyle: { 
+                            color: '#E74C3C',
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        label: { 
+                            show: true, 
+                            position: 'top', 
+                            fontSize: 12,
+                            color: '#333'
+                        },
+                        emphasis: {
+                            itemStyle: { color: '#c0392b' }
+                        }
+                    }]
+                };
+                
+                // 渲染图表
+                myChart.setOption(option);
+            })
+            .catch(err => {
+                console.error('加载演员数据失败：', err);
+                // 显示错误提示
+                document.getElementById('actorChart').style.color = '#e74c3c';
+                document.getElementById('actorChart').style.fontSize = '1.1rem';
+                document.getElementById('actorChart').textContent = `加载失败：${err.message}`;
+                // 销毁无效实例
+                myChart.dispose();
+            });
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', () => {
+            if (myChart && !myChart.isDisposed()) {
+                myChart.resize();
+            }
+        });
+    </script>
+</body>
+</html>

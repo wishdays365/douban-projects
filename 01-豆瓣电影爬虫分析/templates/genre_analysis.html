@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>类型分析 | 豆瓣Top250</title>
+    <style>
+        /* 全局样式（与其他页面视觉统一） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(135deg, #4472C4, #2F5597);
+            color: #fff;
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        /* 导航样式 */
+        .nav {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            padding: 10px 0;
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .nav a {
+            display: block;
+            padding: 12px 25px;
+            color: #333;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .nav a:hover {
+            color: #4472C4;
+            font-weight: bold;
+        }
+        /* 图表容器样式 */
+        .chart-container {
+            max-width: 1200px;
+            height: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            padding: 20px;
+            /* 加载状态默认样式 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 1.2rem;
+        }
+        /* 响应式适配（移动端优化） */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .chart-container {
+                height: 400px;
+                padding: 10px;
+            }
+        }
+        @media (max-width: 600px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>🎭 豆瓣Top250电影 - 类型分布分析</h1>
+        <p>统计Top250中各类型电影的数量占比（Top10）</p>
+    </div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+        </ul>
+    </div>
+
+    <div class="chart-container" id="genreChart">正在加载类型分布数据...</div>
+
+    <script>
+        // 初始化ECharts实例
+        let myChart = echarts.init(document.getElementById('genreChart'));
+        
+        // 加载类型数据（核心优化：禁用缓存 + 完善错误处理）
+        fetch('/api/genre-data', {
+            method: 'GET',
+            cache: 'no-cache' // 关键：禁用浏览器缓存，确保获取最新数据
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(`请求失败 [${res.status}]：${res.statusText}`);
+                return res.json();
+            })
+            .then(data => {
+                // 校验数据有效性
+                if (!data.xAxis || !data.yAxis || data.xAxis.length === 0) {
+                    throw new Error('暂无类型统计数据，请先爬取豆瓣Top250数据');
+                }
+
+                // 配置图表选项（优化样式+交互）
+                const option = {
+                    title: { 
+                        text: '豆瓣Top250电影类型分布（Top10）', 
+                        left: 'center', 
+                        fontSize: 18,
+                        textStyle: { color: '#333', fontWeight: 'normal' }
+                    },
+                    tooltip: { 
+                        trigger: 'axis', 
+                        axisPointer: { type: 'shadow' },
+                        formatter: '{b}：{c} 部', // 自定义提示文本
+                        textStyle: { fontSize: 14 }
+                    },
+                    grid: { 
+                        left: '5%', 
+                        right: '5%', 
+                        bottom: '15%', // 适配X轴标签旋转后的显示
+                        containLabel: true 
+                    },
+                    xAxis: [{ 
+                        type: 'category', 
+                        data: data.xAxis, 
+                        axisLabel: { 
+                            rotate: 30,
+                            fontSize: 12,
+                            interval: 0, // 强制显示所有X轴标签
+                            color: '#666'
+                        },
+                        axisLine: { lineStyle: { color: '#e0e6ed' } }
+                    }],
+                    yAxis: [{ 
+                        type: 'value', 
+                        name: '电影数量（部）',
+                        nameTextStyle: { color: '#666', fontSize: 12 },
+                        min: 0, // Y轴从0开始，数据更直观
+                        axisLine: { lineStyle: { color: '#e0e6ed' } },
+                        splitLine: { lineStyle: { color: '#f0f4f8' } }
+                    }],
+                    series: [{
+                        name: '数量',
+                        type: 'bar',
+                        data: data.yAxis,
+                        itemStyle: {
+                            color: params => {
+                                // 扩展更丰富的颜色库
+                                const colors = [
+                                    '#4472C4', '#5B9BD5', '#70AD47', '#FFC000', '#ED7D31',
+                                    '#FF6666', '#A5A5A5', '#B7DEE8', '#D4B106', '#E73935'
+                                ];
+                                return colors[params.dataIndex % colors.length];
+                            },
+                            borderRadius: [4, 4, 0, 0] // 顶部圆角，更美观
+                        },
+                        label: { 
+                            show: true, 
+                            position: 'top', 
+                            fontSize: 12,
+                            color: '#333',
+                            fontWeight: 'bold'
+                        },
+                        emphasis: {
+                            itemStyle: { 
+                                color: params => {
+                                    // 悬浮时颜色加深
+                                    const darkColors = [
+                                        '#2F5597', '#407FC7', '#538D22', '#E69500', '#D15C27',
+                                        '#E64A19', '#8A8A8A', '#8FC3E2', '#B78900', '#C62828'
+                                    ];
+                                    return darkColors[params.dataIndex % darkColors.length];
+                                }
+                            }
+                        },
+                        barWidth: '60%' // 调整柱宽，更美观
+                    }]
+                };
+                
+                // 渲染图表
+                myChart.setOption(option);
+                // 响应窗口大小变化
+                window.addEventListener('resize', () => myChart.resize());
+            })
+            .catch(err => {
+                console.error('加载类型数据失败：', err);
+                // 页面显示错误提示（替换加载状态）
+                const chartEl = document.getElementById('genreChart');
+                chartEl.style.color = '#e74c3c';
+                chartEl.style.fontSize = '1.1rem';
+                chartEl.textContent = `加载失败：${err.message}`;
+                // 销毁无效的ECharts实例，避免内存泄漏
+                myChart.dispose();
+            });
+    </script>
+</body>
+</html>

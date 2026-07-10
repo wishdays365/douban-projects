@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>数据爬取 | 豆瓣Top250</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* 爬取表单样式 */
+        .crawl-form {
+            max-width: 600px;
+            margin: 0 auto 30px;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #4472C4;
+            font-size: 16px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .crawl-btn {
+            width: 100%;
+            padding: 15px;
+            background: #4472C4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.3s;
+        }
+        .crawl-btn:hover {
+            background: #2F5597;
+        }
+        .crawl-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        /* 结果提示样式 */
+        .result-box {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .loading img {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 豆瓣Top250电影 - 数据爬取</h1>
+        <p>Web端直接触发爬取，生成CSV/JSON数据文件</p>
+    </div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="/">🏠 返回首页</a></li>
+            <li><a href="/search">🔍 电影检索</a></li>
+            <li><a href="/movie-map">🌍 国家分布</a></li>
+        </ul>
+    </div>
+
+    <!-- 爬取表单 -->
+    <div class="crawl-form">
+        <div class="form-group">
+            <label for="pages">爬取页数（1-10页，每页25条）</label>
+            <input type="number" id="pages" name="pages" value="10" min="1" max="10" required>
+            <small style="color: #666; margin-top: 5px; display: block;">
+                豆瓣Top250共10页，每页25条数据，建议爬取10页获取完整数据
+            </small>
+        </div>
+        <div class="loading" id="loading">
+            <img src="https://cdn.bootcdn.net/ajax/libs/ladda/1.0.0/spinners/circular.gif" alt="爬取中...">
+            <p>正在爬取数据，请稍候（约1-2分钟）...</p>
+        </div>
+        <button type="button" class="crawl-btn" id="crawlBtn">开始爬取</button>
+    </div>
+
+    <!-- 结果提示 -->
+    <div class="result-box" id="resultBox"></div>
+
+    <div class="footer">
+        <p>豆瓣Top250电影数据分析系统 © 2025 | 爬取数据仅供学习使用</p>
+    </div>
+
+    <!-- 爬取逻辑JS -->
+    <script>
+        // 获取DOM元素
+        const crawlBtn = document.getElementById('crawlBtn');
+        const pagesInput = document.getElementById('pages');
+        const loading = document.getElementById('loading');
+        const resultBox = document.getElementById('resultBox');
+
+        // 爬取按钮点击事件
+        crawlBtn.addEventListener('click', async () => {
+            // 校验页数
+            const pages = parseInt(pagesInput.value);
+            if (isNaN(pages) || pages < 1 || pages > 10) {
+                showResult('请输入1-10之间的有效页数', 'error');
+                return;
+            }
+
+            // 禁用按钮，显示加载中
+            crawlBtn.disabled = true;
+            loading.style.display = 'block';
+            resultBox.style.display = 'none';
+
+            try {
+                // 调用爬取API
+                const response = await fetch('/api/crawl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `pages=${pages}`
+                });
+
+                const data = await response.json();
+                
+                // 显示结果
+                showResult(data.message, data.success ? 'success' : 'error');
+
+                // 如果爬取成功，3秒后刷新首页（加载新数据）
+                if (data.success) {
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                }
+
+            } catch (error) {
+                showResult(`网络请求失败：${error.message}`, 'error');
+            } finally {
+                // 恢复按钮状态
+                crawlBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        // 显示结果提示
+        function showResult(message, type) {
+            resultBox.textContent = message;
+            resultBox.className = `result-box ${type}`;
+            resultBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

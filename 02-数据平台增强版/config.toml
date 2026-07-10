@@ -1,0 +1,40 @@
+[server]
+host = "127.0.0.1"
+port = 7594
+open_browser = true
+env = "development" # production / development
+
+[logging]
+level = "INFO"
+file = "logs/douban_top250.log"
+format = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+max_bytes = 10485760  # 10MB
+backup_count = 5
+
+[expiry]
+# 保质期（小时），默认3小时
+hours = 3
+# 扰动（分钟），在每次成功爬取后生成0..jitter_minutes之间的随机秒数，避免同时过期
+jitter_minutes = 10
+# 可选：自定义保质期记录文件
+file = "item_expiry.json"
+
+[crawler]
+# 每批次爬取数量
+batch_size = 10
+# 目标总数（默认250）
+target_total = 250
+# 定时检查间隔（秒）
+check_interval = 300
+# 单链接重试次数
+retry_times = 3
+# 列表页延迟（秒，最小和最大）
+list_page_delay = [2.0, 3.0]
+# 详情页延迟（秒，最小和最大）
+detail_page_delay = [3.0, 4.0]
+# 触发反爬后的等待时间（秒）
+anti_crawl_delay = 1800
+# 状态保存文件
+status_file = "crawl_status.json"
+# 最终数据文件
+data_file = "douban_data_v2.json"
